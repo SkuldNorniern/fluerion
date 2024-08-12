@@ -1,16 +1,23 @@
+use sha2::{Sha512, Digest};
+
 pub type Hash256 = [u8; 32];
 
 pub fn calculate_hash(timestamp: &str, prev_block_hash: &Hash256, data: &str) -> Hash256 {
-    let mut result = [0u8; 32];
-    let mut index = 0;
+    let mut hasher = Sha512::new();
 
-    // Simple custom hashing algorithm (not cryptographically secure, just for demonstration)
-    for byte in timestamp.bytes().chain(prev_block_hash.iter().cloned()).chain(data.bytes()) {
-        result[index % 32] ^= byte;
-        result[(index + 1) % 32] = result[(index + 1) % 32].wrapping_add(byte);
-        result[(index + 2) % 32] = result[(index + 2) % 32].wrapping_sub(byte);
-        index += 3;
-    }
+    // Update the hasher with all the input data
+    hasher.update(timestamp.as_bytes());
+    hasher.update(prev_block_hash);
+    hasher.update(data.as_bytes());
 
-    result
+    // Finalize and truncate to 256 bits
+    let result = hasher.finalize();
+    let mut hash256 = [0u8; 32];
+    hash256.copy_from_slice(&result[..32]);
+
+    hash256
+}
+
+pub fn hash_to_hex(hash: &Hash256) -> String {
+    hash.iter().map(|byte| format!("{:02x}", byte)).collect()
 }
