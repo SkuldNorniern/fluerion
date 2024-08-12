@@ -1,14 +1,16 @@
 use crate::hash::Hash256;
+use crate::transaction::Transaction;
 
 pub struct Block {
     timestamp: u64,
     prev_block_hash: Hash256,
     hash: Hash256,
-    data: String,
+    transactions: Vec<Transaction>,
+    nonce: u64,
 }
 
 impl Block {
-    pub fn new(data: String, prev_block_hash: Hash256) -> Self {
+    pub fn new(transactions: Vec<Transaction>, prev_block_hash: Hash256) -> Self {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -18,7 +20,8 @@ impl Block {
             timestamp,
             prev_block_hash,
             hash: [0; 32],
-            data,
+            transactions,
+            nonce: 0,
         };
         
         block.hash = block.calculate_hash();
@@ -26,12 +29,20 @@ impl Block {
     }
 
     pub fn calculate_hash(&self) -> Hash256 {
-        // We'll implement this in the hash module
-        crate::hash::calculate_hash(&self.timestamp.to_string(), &self.prev_block_hash, &self.data)
+        let data = self.transactions.iter()
+            .map(|tx| tx.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        crate::hash::calculate_hash(&self.timestamp.to_string(), &self.prev_block_hash, &data)
     }
 
     pub fn genesis() -> Self {
-        Block::new("Genesis Block".to_string(), [0; 32])
+        let genesis_tx = Transaction::new(
+            "Genesis".to_string(),
+            "Genesis".to_string(),
+            0.0,
+        );
+        Block::new(vec![genesis_tx], [0; 32])
     }
 
     pub fn get_hash(&self) -> Hash256 {
@@ -46,7 +57,19 @@ impl Block {
         self.timestamp
     }
 
-    pub fn get_data(&self) -> &str {
-        &self.data
+    pub fn get_transactions(&self) -> &Vec<Transaction> {
+        &self.transactions
+    }
+
+    pub fn set_nonce(&mut self, nonce: u64) {
+        self.nonce = nonce;
+    }
+
+    pub fn set_hash(&mut self, hash: Hash256) {
+        self.hash = hash;
+    }
+
+    pub fn get_nonce(&self) -> u64 {
+        self.nonce
     }
 }
