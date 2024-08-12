@@ -1,0 +1,11 @@
+[package]
+name = "fluerion-miner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+num_cpus = "1.16.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10.8"
+tokio = { version = "1.39", features = ["full", "macros", "rt-multi-thread"] }

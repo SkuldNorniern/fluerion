@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
-use crate::hash::{Hash256, calculate_hash};
+use crate::hash::{calculate_hash, Hash256};
+use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -28,7 +28,10 @@ impl Transaction {
     }
 
     pub fn calculate_hash(&self) -> Hash256 {
-        let data = format!("{}{}{}{}", self.sender, self.receiver, self.amount, self.timestamp);
+        let data = format!(
+            "{}{}{}{}",
+            self.sender, self.receiver, self.amount, self.timestamp
+        );
         calculate_hash(&self.timestamp.to_string(), &[0; 32], &data)
     }
 
@@ -41,7 +44,21 @@ impl Transaction {
     }
 
     pub fn to_string(&self) -> String {
-        format!("From: {} To: {} Amount: {} Time: {} Signed: {}",
-            self.sender, self.receiver, self.amount, self.timestamp, self.is_signed())
+        format!(
+            "From: {} To: {} Amount: {} Time: {} Signed: {}",
+            self.sender,
+            self.receiver,
+            self.amount,
+            self.timestamp,
+            self.is_signed()
+        )
+    }
+
+    pub fn from_json(json: &str) -> Self {
+        serde_json::from_str(json).unwrap()
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 }

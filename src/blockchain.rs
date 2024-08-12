@@ -1,6 +1,7 @@
 use crate::block::Block;
-use crate::hash::{Hash256, hash_to_hex, calculate_hash};
+use crate::hash::{calculate_hash, hash_to_hex, Hash256};
 use crate::transaction::Transaction;
+use serde_json; // Added this import
 
 const DIFFICULTY: usize = 4; // Number of leading zeros required in the hash
 
@@ -31,10 +32,7 @@ impl Blockchain {
 
     pub fn new_block(&self) -> Block {
         let prev_block = self.get_latest_block();
-        let mut new_block = Block::new(
-            self.pending_transactions.clone(),
-            prev_block.get_hash(),
-        );
+        let mut new_block = Block::new(self.pending_transactions.clone(), prev_block.get_hash());
 
         let (nonce, hash) = self.proof_of_work(&new_block);
         new_block.set_nonce(nonce);
@@ -55,7 +53,9 @@ impl Blockchain {
     }
 
     fn calculate_hash_with_nonce(&self, block: &Block, nonce: u64) -> Hash256 {
-        let data = block.get_transactions().iter()
+        let data = block
+            .get_transactions()
+            .iter()
             .map(|tx| tx.to_string())
             .collect::<Vec<String>>()
             .join(", ");
@@ -107,6 +107,51 @@ impl Blockchain {
                 println!("  {}", tx.to_string());
             }
             println!("------------------------");
+        }
+    }
+
+    pub fn get_chain_json(&self) -> String {
+        serde_json::to_string(&self.blocks).unwrap()
+    }
+
+    pub fn add_mined_block(&mut self, block: Block) {
+        if self.is_valid_new_block(&block) {
+            self.blocks.push(block);
+            self.pending_transactions.clear();
+        }
+    }
+
+    fn is_valid_new_block(&self, block: &Block) -> bool {
+        let latest_block = self.get_latest_block();
+        if block.get_prev_hash() != latest_block.get_hash() {
+            return false;
+        }
+        if !self.valid_proof(&block.get_hash()) {
+            return false;
+        }
+        true
+    }
+
+    pub fn get_balance(&self, address: &str) -> f64 {
+        let mut balance = 0.0;
+        for block in &self.blocks {
+            for tx in block.get_transactions() {
+                if tx.sender == address {
+                    balance -= tx.amount;
+                }
+                if tx.receiver == address {
+                    balance += tx.amount;
+                }
+            }
+        }
+        balance
+    }
+
+    pub fn get_block_to_mine(&self) -> Option<Block> {
+        if self.pending_transactions.is_empty() {
+            None
+        } else {
+            Some(Block::new(self.pending_transactions.clone(), self.get_latest_block().get_hash()))
         }
     }
 }

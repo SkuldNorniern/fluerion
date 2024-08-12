@@ -1,9 +1,9 @@
-use sha2::{Sha512, Digest};
+use sha2::{Digest, Sha256};
 
 pub type Hash256 = [u8; 32];
 
 pub fn calculate_hash(timestamp: &str, prev_block_hash: &Hash256, data: &str) -> Hash256 {
-    let mut hasher = Sha512::new();
+    let mut hasher = Sha256::new();
 
     // Update the hasher with all the input data
     hasher.update(timestamp.as_bytes());

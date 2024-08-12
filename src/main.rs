@@ -1,24 +1,36 @@
 mod block;
-mod hash;
 mod blockchain;
+mod hash;
+mod network;
 mod transaction;
 
-use blockchain::Blockchain;
+use network::Node;
+use std::env;
 use transaction::Transaction;
 
-fn main() {
-    let mut blockchain = Blockchain::new();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: {} <node_address> [bootstrap_node]", args[0]);
+        std::process::exit(1);
+    }
 
-    blockchain.add_transaction(Transaction::new("Alice".to_string(), "Bob".to_string(), 50.0));
-    blockchain.add_transaction(Transaction::new("Bob".to_string(), "Charlie".to_string(), 30.0));
-    blockchain.mine_pending_transactions();
+    let node_address = args[1].clone();
+    let mut node = Node::new(node_address.clone());
 
-    blockchain.add_transaction(Transaction::new("Charlie".to_string(), "David".to_string(), 20.0));
-    blockchain.add_transaction(Transaction::new("David".to_string(), "Alice".to_string(), 15.0));
-    blockchain.mine_pending_transactions();
+    if args.len() > 2 {
+        let bootstrap_node = &args[2];
+        println!("Discovering peers from bootstrap node: {}", bootstrap_node);
+        node.discover_peers(bootstrap_node).await?;
+    }
 
-    println!("Is blockchain valid? {}", blockchain.is_valid());
+    // Create and broadcast a transaction
+    let transaction = Transaction::new("Alice".to_string(), "Bob".to_string(), 50.0);
+    node.broadcast_transaction(&transaction).await;
 
-    println!("\nBlockchain contents:");
-    blockchain.print_chain();
+    // Start the node
+    node.start().await?;
+
+    Ok(())
 }
