@@ -1,5 +1,5 @@
 use crate::block::Block;
-use crate::hash::Hash256;
+use crate::hash::{Hash256, hash_to_hex};
 
 pub struct Blockchain {
     blocks: Vec<Block>,
@@ -36,5 +36,16 @@ impl Blockchain {
 
     pub fn get_latest_block(&self) -> &Block {
         self.blocks.last().unwrap()
+    }
+
+    pub fn print_chain(&self) {
+        for (index, block) in self.blocks.iter().enumerate() {
+            println!("Block #{}", index);
+            println!("Timestamp: {}", block.get_timestamp());
+            println!("Previous Hash: {}", hash_to_hex(&block.get_prev_hash()));
+            println!("Hash: {}", hash_to_hex(&block.get_hash()));
+            println!("Data: {}", block.get_data());
+            println!("------------------------");
+        }
     }
 }

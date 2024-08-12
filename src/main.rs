@@ -13,6 +13,6 @@ fn main() {
 
     println!("Is blockchain valid? {}", blockchain.is_valid());
 
-    // Print the latest block's hash
-    println!("Latest block hash: {:?}", blockchain.get_latest_block().get_hash());
+    println!("\nBlockchain contents:");
+    blockchain.print_chain();
 }

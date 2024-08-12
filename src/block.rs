@@ -41,4 +41,12 @@ impl Block {
     pub fn get_prev_hash(&self) -> Hash256 {
         self.prev_block_hash
     }
+
+    pub fn get_timestamp(&self) -> u64 {
+        self.timestamp
+    }
+
+    pub fn get_data(&self) -> &str {
+        &self.data
+    }
 }
