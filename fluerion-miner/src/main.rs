@@ -99,7 +99,8 @@ async fn receive_block(stream: &mut TcpStream) -> io::Result<Option<Block>> {
 }
 
 fn mine_block_multi_threaded(mut block: Block) -> Block {
-    let target = [0; 32]; // Simplified difficulty target
+    let mut target = [0xFF; 32];
+    target[0] = 0x00; // Adjust this value to set the desired difficulty
     let block = Arc::new(Mutex::new(block));
     let found = Arc::new(Mutex::new(false));
     let num_threads = num_cpus::get();
@@ -121,15 +122,20 @@ fn mine_block_multi_threaded(mut block: Block) -> Block {
                 while !*found.lock().unwrap() {
                     local_block.nonce = nonce;
                     let hash = calculate_hash(&local_block);
-                    if hash <= target {
+                    if hash < target {
                         let mut block = block.lock().unwrap();
                         *block = local_block;
                         block.hash = hash;
                         *found.lock().unwrap() = true;
+                        println!("Nonce found: {}", nonce);
                         break;
                     }
                     nonce += num_threads as u64;
                     local_progress += 1;
+
+                    // if local_progress % 10_000 == 0 {
+                        // println!("Thread {}: Nonce {} - Local progress: {} hashes", i, nonce, local_progress);
+                    // }
 
                     if local_progress % 100_000 == 0 {
                         *progress.lock().unwrap() += local_progress;
@@ -145,7 +151,15 @@ fn mine_block_multi_threaded(mut block: Block) -> Block {
             thread::sleep(Duration::from_secs(5));
             let total_progress = *progress.lock().unwrap();
             let elapsed = start_time.elapsed().as_secs();
-            println!("Mining progress: {} hashes/s", total_progress / elapsed);
+            let hash_rate = if elapsed > 0 { total_progress / elapsed } else { 0 };
+            let estimated_time = if hash_rate > 0 {
+                let target_value = u64::from_be_bytes(target[0..8].try_into().unwrap());
+                let max_nonce = u64::MAX;
+                (max_nonce - target_value) / hash_rate
+            } else {
+                0
+            };
+            println!("Mining progress: {} hashes/s, Estimated time: {} seconds", hash_rate, estimated_time);
         }
     });
 
@@ -159,11 +173,19 @@ fn mine_block_multi_threaded(mut block: Block) -> Block {
 }
 
 fn calculate_hash(block: &Block) -> [u8; 32] {
-    // Simplified hash calculation
     let mut hasher = Sha256::new();
     hasher.update(&block.timestamp.to_le_bytes());
     hasher.update(&block.prev_block_hash);
     hasher.update(&block.nonce.to_le_bytes());
+    
+    // Include transactions data
+    for tx in &block.transactions {
+        hasher.update(tx.sender.as_bytes());
+        hasher.update(tx.receiver.as_bytes());
+        hasher.update(&tx.amount.to_le_bytes());
+        hasher.update(&tx.timestamp.to_le_bytes());
+    }
+    
     let result = hasher.finalize();
     let mut hash = [0; 32];
     hash.copy_from_slice(&result);
